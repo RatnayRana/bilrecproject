@@ -1,0 +1,22 @@
+/* Hide the actual file input */
+#custom-file-upload {
+  display: none;
+}
+
+/* Style the label */
+.custom-file-upload {
+  display: inline-block;
+  padding: 10px 20px;
+  cursor: pointer;
+  background-color: #007bff; /* Change this to your preferred color */
+  color: white;
+  border-radius: 4px;
+  border: 1px solid #007bff; /* Match the background color */
+  font-size: 16px;
+  text-align: center;
+}
+
+.custom-file-upload:hover {
+  background-color: #0056b3; /* Darken on hover */
+  border-color: #0056b3; /* Match the hover background color */
+}

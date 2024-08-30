@@ -1,0 +1,68 @@
+{% extends 'home.html' %} {% load static %} {% block title %}Generate
+Report{%endblock %} {% block extra_css %}
+<link rel="stylesheet" href="{% static 'src/input.css' %}" />
+{% endblock %} {% block main %}
+<div
+  class="d-flex flex-column justify-content-center align-items-center"
+  style="width: 70%; height: 30%; margin-top: 180px"
+>
+
+
+  <form method="POST" enctype="multipart/form-data">
+    {% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" id="messagebox">
+            <button type='button' class='close' onclick='$(this).parent().remove();'>×</button>
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+    {% csrf_token %}
+    <div class="rounded-top bg-dark" style="height: 70px; width: 580px">
+      <h1
+        class="text-align"
+        style="color: white; text-align: center; padding-top: 10px"
+      >
+        Start the Reconcilation
+      </h1>
+    </div>
+    <div class="d-flex flex-row mt-5 gap-3">
+      <div class="d-flex gap-3">
+        <label for="start_date" style="font-size: 24px">Start Date</label>
+        <input
+          type="date"
+          id="start_date"
+          name="start_date"
+          style="height: 40px; border-radius: 5px; padding: 10px"
+        />
+      </div>
+      <div class="d-flex gap-3">
+        <label for="birthday" style="font-size: 24px">End Date</label>
+        <input
+          type="date"
+          id="birthday"
+          name="end_date"
+          style="height: 40px; border-radius: 5px; padding: 10px"
+        />
+      </div>
+    </div>
+
+
+    <div class="d-flex justify-content-center mt-3 align-items-center">
+      <button
+        type="submit"
+        class="btn bg-dark btn-lg mt-4 text-light"
+        style="width: 40%;margin-right: 400px;"
+      >
+        Submit
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %} {% block content %} {% endblock %} {% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/5.1.0/js/bootstrap.min.js"></script>
+<script src="{% static 'Javascript/script.js' %}"></script>
+{% endblock %}

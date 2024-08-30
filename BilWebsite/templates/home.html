@@ -1,0 +1,122 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{% static 'src/input.css' %}" />
+    <title>{% block title %}NavBar HTML{% endblock %}</title>
+    <script
+      src="https://kit.fontawesome.com/4764f4dcde.js"
+      crossorigin="anonymous"
+    ></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    {% block htmlhead %} {% endblock htmlhead %}
+  </head>
+  <body>
+  
+
+   
+   
+
+    <div class="container-fluid ">
+      <div class="row flex-nowrap ">
+        <div  class="bg-dark col-auto col-md-3 min-vh-100 rounded  " >
+          <div class="bg-dark p-2">
+            <div class="d-flex flex-row" >
+              <a class="d-flex text-decoration-none mt-1 align-items-center text-white">
+                <span class="fs- d-none d-sm-inline">
+                  <nav class="topnav">
+                    <i class="fa-solid fa-bars fa-3x" style="margin: 10px 60px;color: white;"></i>
+                  </nav>
+                </span>
+  
+              </a>
+  
+              <nav class="topnav">
+          
+                <a href="#"><img src="../static/uploads/billogo.png" /></a>
+              </nav> 
+            </div>
+           
+            <ul class="nav nav-pills flex-column mt-3 ">
+              <li class="nav-item mt-3">
+                  <a href="" class="nav-link text-white">
+                      <i class="fs-5 fa fa-gauge">
+                          <span class="fs-6 ms-3 d-none d-sm-inline">Dashboard</span>
+                      </i>
+                  </a>
+              </li>
+              <li class="nav-item mt-3">
+                  <a href="" class="nav-link text-white">
+                      <i class="fs-5 fa fa-house">
+                          <span class="fs-6 ms-3 d-none d-sm-inline">Home</span>
+                      </i>
+                  </a>
+              </li>
+              <li class="nav-item mt-3">
+                  <a href="" class="nav-link text-white">
+                      <i class="fs-5 fa fa-user">
+                          <span class="fs-6 ms-3 d-none d-sm-inline">User</span>
+                      </i>
+                  </a>
+              </li>
+              <li class="nav-item mt-3">
+                  <a  href="{% url 'uploadbankstatement' %}" class="nav-link text-white">
+                      <i class="fs-5 fa fa-upload">
+                          <span class="fs-6 ms-3 d-none d-sm-inline">Upload Bank Statement</span>
+                      </i>
+                  </a>
+              </li>
+              <li class="nav-item mt-3">
+                  <a href=" {% url 'uploaddailyreport' %}" class="nav-link text-white">
+                      <i class="fs-5 fa fa-upload">
+                          <span class="fs-6 ms-3 d-none d-sm-inline">Upload daily report</span>
+                      </i>
+                  </a>
+              </li>
+              <li class="nav-item mt-3">
+                  <a href=" {% url 'startReconcilation' %}" class="nav-link text-white">
+                      <i class="fs-5 fa fa-upload">
+                          <span class="fs-6 ms-3 d-none d-sm-inline">Start Reconcilation</span>
+                      </i>
+                  </a>
+              </li>
+              <li class="nav-item mt-3">
+                  <a href="{% url 'generateReport'%}" class="nav-link text-white">
+                      <i class="fs-5 fa fa-book">
+                          <span class="fs-6 ms-3 d-none d-sm-inline">Generate Report</span>
+                      </i>
+                  </a>
+              </li>
+
+            </ul>
+          </div>
+        </div>
+        <div> 
+          <h1  style="color: black; text-align: center;margin-right: 300px; margin-top: 10px;">Bil Systems</h1>
+          {% block main%}
+          
+          {%endblock%}
+      </div>
+      </div>
+    </div>
+ 
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {% block extra_js %}
+    <script src="{% static 'Javascript/script.js' %}"></script>
+    {% endblock %}
+    {% block content%} {% endblock%}
+  </body>
+</html>
