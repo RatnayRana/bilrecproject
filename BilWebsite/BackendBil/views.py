@@ -679,7 +679,7 @@ def generateReport(request):
                     OR dr.instrument_number = bbs.instrument_number 
                     OR dr.instrument_number = bbs.reference_no)
  
-                WHERE dr.status = 'success' And bbs.status='success'
+                WHERE dr.status = 'success' 
                 AND dr.tran_date BETWEEN %s AND %s 
                    
                 """
