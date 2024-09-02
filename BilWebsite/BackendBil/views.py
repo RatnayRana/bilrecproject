@@ -15,7 +15,6 @@ from .models import Bank,System,DailyReportBankStatement,BankAccount
 from django.db.models import Q
 from datetime import date, datetime
 from django.db import connection
-from django.db import connection
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from datetime import datetime
@@ -184,88 +183,90 @@ def uploadBankStatement(request):
                 pdf = pdfplumber.open(file_path)
                 BankStatementSave = False
                 Bank_Number = None
+                combined_lines = []
+                current_record = []
+                formatted_transactions = []
                 for page in pdf.pages:
-                    
                     raw_text = page.extract_text()
-                    formatted_transactions = []
                     if raw_text:
                         lines = raw_text.split('\n')
-                        combined_lines = []
-                        current_record = []
                         for line in lines:
                             line = line.strip()
+            
+            # Search for bank number
                             bank_number = bank_number_regex.search(line)
                             if bank_number is not None:
-                                Bank_Number=bank_number.group(1)
+                                Bank_Number = bank_number.group(1)
+                
                             if record_pattern.match(line):
                                 if current_record:
                                     combined_lines.append(' '.join(current_record).strip())
                                 current_record = [line]
                             else:
-                # Continue adding lines to the current record
                                 current_record.append(line)
-                    if current_record:
-                        combined_lines.append(' '.join(current_record).strip())
-                    transaction_number = None
-                    transaction_status = None
-                    for record in combined_lines:
-                        date_match = record_pattern.search(record)
-                        date = date_match.group() if date_match else ''
-            
-                        description_match = description_pattern.search(record)
-                        description = description_match.group() if description_match else ''
-                        if description.strip().startswith("CHEQUE CLEARED"):
-                            cheque_number = cheque_cleared.search(description)   
-                            if cheque_number:
-                                transaction_number = cheque_number.group(2)
-                                transaction_status = "CHEQUE CLEARED"
-
-                            else:
-                                transaction_number = None
-                                transaction_status = None
-
-                        elif description.strip().startswith("In-House"):
-                            inhouse_pattern = in_house.search(description)   
-                            if inhouse_pattern:
-                                transaction_number = inhouse_pattern.group(1)
-                                transaction_status= "IN-House Cheque"
-                            else:
-                                transaction_number = None
-                                transaction_status = None
-                        elif description.strip().startswith("Incoming Fund Transfer"):
-                            Incoming = Incoming_fund_transfer.search(description)   
-                            if Incoming:
-                                transaction_number = Incoming.group(1)
-                                transaction_status = "INCOMING FUND TRANSFER"
-                            else:
-                                transaction_number = None
-                                transaction_status = None
-                        elif description.strip().startswith("Incoming Payment via"):
-                            Incoming = Incoming_fund_transfer.search(description)   
-                            if Incoming:
-                                transaction_number = Incoming.group(1)
-                                transaction_status = "Incoming Payment via"
-                            else:
-                                transaction_number = None
-                                transaction_status = None
+                        if current_record:
+                            combined_lines.append(' '.join(current_record).strip())
+                            current_record = []
+                formatted_records = []
+                for record in combined_lines:
+                    if not record_pattern.match(record):
+                        if formatted_records:
+                            formatted_records[-1] += ' ' + record
                         else:
-                           
-                                transaction_number = None
-                                transaction_status = None
-                     
-                          
+                            formatted_records.append(record)
+                    else:
+                        formatted_records.append(record)
+                
+                for record in formatted_records:
+                    date_match = record_pattern.search(record)
+                    date = date_match.group() if date_match else ''
+                    description_match = description_pattern.search(record)
+                    description = description_match.group() if description_match else ''
+                    if description.strip().startswith("CHEQUE CLEARED"):
+                        cheque_number = cheque_cleared.search(description)   
+                        if cheque_number:
+                            transaction_number = cheque_number.group(2)
+                            transaction_status = "CHEQUE CLEARED"
 
-                        references = pattern_reference.findall(record)
-                        reference = references[0] if references else ' '
-            
-                        instrument_match = instrument_pattern.search(record)
-                        instrument = instrument_match.group() if instrument_match else ' '
-            
-                        amounts = pattern_amount.findall(record)
-                        credit_balance = amounts[0] if len(amounts) > 0 else ''
-                        balance = amounts[1] if len(amounts) > 1 else ''
-                    
-                        formatted_transactions.append({
+                        else:
+                            transaction_number = None
+                            transaction_status = None
+
+                    elif description.strip().startswith("In-House"):
+                        inhouse_pattern = in_house.search(description)   
+                        if inhouse_pattern:
+                            transaction_number = inhouse_pattern.group(1)
+                            transaction_status= "IN-House Cheque"
+                        else:
+                            transaction_number = None
+                            transaction_status = None
+                    elif description.strip().startswith("Incoming Fund Transfer"):
+                        Incoming = Incoming_fund_transfer.search(description)   
+                        if Incoming:
+                            transaction_number = Incoming.group(1)
+                            transaction_status = "INCOMING FUND TRANSFER"
+                        else:
+                            transaction_number = None
+                            transaction_status = None
+                    elif description.strip().startswith("Incoming Payment via"):
+                        Incoming = Incoming_fund_transfer.search(description)   
+                        if Incoming:
+                            transaction_number = Incoming.group(1)
+                            transaction_status = "Incoming Payment via"
+                        else:
+                            transaction_number = None
+                            transaction_status = None
+                    else:
+                        transaction_number = None
+                        transaction_status = None
+                    references = pattern_reference.findall(record)
+                    reference = references[0] if references else ' '
+                    instrument_match = instrument_pattern.search(record)
+                    instrument = instrument_match.group() if instrument_match else ' '
+                    amounts = pattern_amount.findall(record)
+                    credit_balance = amounts[0] if len(amounts) > 0 else ''
+                    balance = amounts[1] if len(amounts) > 1 else ''
+                    formatted_transactions.append({
                             "Date": date,
                             "Description": description,
                             "Reference": reference,
@@ -275,31 +276,30 @@ def uploadBankStatement(request):
                             "TransactionNumber": transaction_number,
                             "Transaction_status": transaction_status
                         })
-                    
 
-                 
-                    for record in formatted_transactions:
-                        journal_number = record.get('journal_number', '').strip() or None
-                        # if record['Date'] and record['Balance']:
-                        try:
-                            date = datetime.strptime(record['Date'], '%d-%b-%y')
-                            BankStatement.objects.create(
-                                date=date,
-                                journal_number= record['TransactionNumber'] if record['TransactionNumber'] else None,
-                                rr_number= record['Description'] if record['Description'] else None,
-                                instrument_number=record['CheckNo_InstrumentNo'] if record['CheckNo_InstrumentNo'] else None,
-                                reference_no= record['Reference'] if record['Reference'] else None,
-                                transaction_type=record['Transaction_status'] if record['Transaction_status'] else None,
-                                credit=float(record['Amount'].replace(',', '')),
-                                balance=float(record['Balance'].replace(',', '')),
-                                bank_name=Bank_data,
-                                bank_account_number=Bank_Number,
-                                system_name=System_data,)
-                            BankStatementSave = True
-                        except IntegrityError as e:
-                                logger.warning(f"IntegrityError: {e}. Record with date {date} and journal number {journal_number} already exists.")
-                        except ValueError as e:
-                            print(f"Error parsing date: {e}")
+                    
+                formatted_transactions = formatted_transactions[2:]
+                
+                for record in formatted_transactions:
+                    try:
+                        date = datetime.strptime(record['Date'], '%d-%b-%y')
+                        BankStatement.objects.create(
+                            date=date,
+                            journal_number= record['TransactionNumber'] if record['TransactionNumber'] else None,
+                            rr_number= record['Description'] if record['Description'] else None,
+                            instrument_number=record['CheckNo_InstrumentNo'] if record['CheckNo_InstrumentNo'] else None,
+                            reference_no= record['Reference'] if record['Reference'] else None,
+                            transaction_type=record['Transaction_status'] if record['Transaction_status'] else None,
+                            credit=float(record['Amount'].replace(',', '')),
+                            balance=float(record['Balance'].replace(',', '')),
+                            bank_name=Bank_data,
+                            bank_account_number=Bank_Number,
+                            system_name=System_data,)
+                        BankStatementSave = True
+                    except IntegrityError as e:
+                            logger.warning(f"IntegrityError: {e}. Record with date {date} and journal number {journal_number} already exists.")
+                    except ValueError as e:
+                        print(f"Error parsing date: {e}")
                        
                     
                             
@@ -656,28 +656,31 @@ def generateReport(request):
 
         try:
             query = """
-                    SELECT 
-                        dr.id,
-                        dr.tran_date,
-                        dr.voucher_no,
-                        dr.instrument_number,
-						dr.credit_amount,
-						dr.debit_amount,
-                        sys.name,
-                        bbs.journal_number,
-                        bbs.reference_no,
-                        bbs.instrument_number AS bbs_instrument_number,
-                        bbs.debit,
-                        bbs.credit,
-                        bbs.bank_account_number,
-                        dr.status
-                    FROM public."BackendBil_dailyreportbankstatement" dr
-                    JOIN public."BackendBil_system" sys ON dr.system_name_id = sys.id
-                    JOIN public."BackendBil_bankstatement" bbs ON sys.id = bbs.system_name_id
-                    WHERE dr.status = 'success'
-                    AND (dr.instrument_number = bbs.journal_number 
-                        OR dr.instrument_number = bbs.instrument_number 
-                        OR dr.instrument_number = bbs.reference_no) AND dr.tran_date BETWEEN %s AND %s
+            SELECT 
+                    dr.id,
+                    dr.tran_date,
+                    dr.voucher_no,
+                    dr.instrument_number,
+                    dr.credit_amount,
+                    dr.debit_amount,
+                    sys.name,
+                    bbs.journal_number,
+                    bbs.reference_no,
+                    bbs.instrument_number AS bbs_instrument_number,
+                    bbs.debit,
+                    bbs.credit,
+                    bbs.bank_account_number,
+                    dr.status
+                FROM public."BackendBil_dailyreportbankstatement" dr
+                LEFT JOIN public."BackendBil_system" sys ON dr.system_name_id = sys.id
+                LEFT JOIN public."BackendBil_bankstatement" bbs ON 
+                    sys.id = bbs.system_name_id and(
+                    dr.instrument_number = bbs.journal_number 
+                    OR dr.instrument_number = bbs.instrument_number 
+                    OR dr.instrument_number = bbs.reference_no)
+ 
+                WHERE dr.status = 'success' And bbs.status='success'
+                AND dr.tran_date BETWEEN %s AND %s 
                    
                 """
         
@@ -749,11 +752,9 @@ def generateReport(request):
                 SELECT  
                 dr.id, dr.tran_date, dr.voucher_no, dr.instrument_number,
 						dr.credit_amount,
-						dr.debit_amount,sys.name,bbs.bank_account_number, dr.status
+						dr.debit_amount, dr.status
                 FROM public."BackendBil_dailyreportbankstatement" dr
-                join public."BackendBil_system" sys on dr.system_name_id = sys.id
-                join public."BackendBil_bankstatement" as bbs on sys.id = bbs.system_name_id
-                WHERE dr.status = 'Failed' 
+                WHERE (dr.status = 'Failed' or dr.status='Pending')
                 AND dr.tran_date BETWEEN %s AND %s
                 
     
@@ -766,16 +767,16 @@ def generateReport(request):
         params = [startdate, enddate] 
 
         
-        if system_id and system_id != 'Select System ID':
-            conditions.append("dr.system_name_id = %s")
-            params.append(system_id)
+        # if system_id and system_id != 'Select System ID':
+        #     conditions.append("dr.system_name_id = %s")
+        #     params.append(system_id)
        
 
         
         if  account_number and account_number != 'Select Account Number':
-            conditions.append("bbs.bank_account_number = %s AND  dr.bank_account_number=%s")
+            conditions.append("dr.bank_account_number=%s")
             params.append(account_number) 
-            params.append(account_number) 
+          
         
         if conditions:
             query += " AND " + " AND ".join(conditions)
@@ -792,7 +793,7 @@ def generateReport(request):
                     messages.error(request, f"An error occurred while processing your request: {str(e)}")
                     return render(request, 'generateReport.html', context)
                 total_records = len(list(reconciliation_report))
-                headers = ['SL.No', 'Date', 'Voucher Number',  'DCR Instrument Number','credit_amount', 'debit_amount','System_Name','Account Number' 'status']
+                headers = ['SL.No', 'Date', 'Voucher Number',  'DCR Instrument Number','credit_amount', 'debit_amount', 'status']
                 for col_num, header in enumerate(headers, 1):
                     col_letter = get_column_letter(col_num)
                     sheet3[f'{col_letter}1'] = header
@@ -803,9 +804,8 @@ def generateReport(request):
                     sheet3[f'D{row_num}'] = getattr(record, 'instrument_number', 'N/A')
                     sheet3[f'E{row_num}'] = getattr(record, 'credit_amount', 'N/A')
                     sheet3[f'F{row_num}'] = getattr(record, 'debit_amount', 'N/A')
-                    sheet3[f'G{row_num}'] = getattr(record, 'name', 'N/A')
-                    sheet3[f'H{row_num}'] = getattr(record, 'bank_account_number', 'N/A')
-                    sheet3[f'I{row_num}'] = getattr(record, 'status', 'N/A')
+                 
+                    sheet3[f'G{row_num}'] = getattr(record, 'status', 'N/A')
 
         except Exception as e:
                 print(f"An error occurred: {str(e)}")
@@ -878,82 +878,109 @@ def generateReport(request):
     
     return render(request, 'generateReport.html',context)
 
-def startReconcilation(request):
+from django.db import connection
 
+def startReconcilation(request):
     startdate = request.POST.get('start_date')
-    
     enddate = request.POST.get('end_date')
-    success = 0
-    Failed = 0
-    # startdate = datetime.strptime(startdate, '%Y-%m-%d').date()
-    # enddate = datetime.strptime(enddate, '%Y-%m-%d').date()
-    if startdate and enddate is not None:
+    
+    if startdate and enddate:
         startdate = datetime.strptime(startdate, '%Y-%m-%d').date()
         enddate = datetime.strptime(enddate, '%Y-%m-%d').date()
-        print(startdate,enddate)
-        daily_reports = DailyReportBankStatement.objects.filter(tran_date__range=[startdate, enddate])
-        for i in daily_reports:
-            print(i)
+
+        success = 0
+        Failed = 0
         
-        # daily_reports = DailyReportBankStatement.objects.filter(date__range=[startdate, enddate])
-        bank_statements = BankStatement.objects.filter(date__range=[startdate, enddate])
+        with connection.cursor() as cursor:
+            # Update DailyReportBankStatement based on matching criteria
+            cursor.execute('''
+                UPDATE public."BackendBil_dailyreportbankstatement" drbs
+                SET status = CASE
+                    WHEN EXISTS (
+                        SELECT 1
+                        FROM public."BackendBil_bankstatement" bs
+                        WHERE 
+                            (
+                                bs.journal_number = drbs.instrument_number OR 
+                                bs.instrument_number = drbs.instrument_number OR 
+                                bs.reference_no = drbs.instrument_number
+                                OR bs.rr_number =drbs.instrument_number
+                            ) 
+                            AND 
+                            (
+                                bs.debit = drbs.credit_amount OR 
+                                bs.credit = drbs.debit_amount
+                            )
+                    )
+                    THEN 'success'
+                    ELSE 'Failed'
+                END
+                WHERE drbs.tran_date BETWEEN %s AND %s
+            ''', [startdate, enddate])
+            
+            # Count the number of successful and failed updates in DailyReportBankStatement
+            cursor.execute('''
+                SELECT 
+                    SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) AS success_count,
+                    SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) AS failed_count
+                FROM public."BackendBil_dailyreportbankstatement"
+                WHERE tran_date BETWEEN %s AND %s
+            ''', [startdate, enddate])
+            result = cursor.fetchone()
+            success = result[0] or 0
+            Failed = result[1] or 0
+            
+            # Update BankStatement based on matching criteria
+            cursor.execute('''
+                UPDATE public."BackendBil_bankstatement" bs
+                SET status = CASE
+                    WHEN EXISTS (
+                        SELECT 1
+                        FROM public."BackendBil_dailyreportbankstatement" drbs
+                        WHERE 
+                            (
+                                drbs.instrument_number = bs.journal_number OR 
+                                drbs.instrument_number = bs.instrument_number OR 
+                                drbs.instrument_number = bs.reference_no OR
+                                drbs.instrument_number = bs.rr_number 
 
-    
-        for bank_records in daily_reports:
-            match_report = bank_statements.filter(
-            Q(journal_number__iexact=bank_records.instrument_number) |
-            Q(instrument_number__iexact=bank_records.instrument_number) |
-            Q(reference_no__iexact=bank_records.instrument_number) |
-            Q(rr_number__iexact=bank_records.instrument_number)
-                ).filter(
-            Q(debit=Decimal(bank_records.credit_amount)) |
-            Q(credit=Decimal(bank_records.debit_amount))
-            ).first()
-            if match_report:
-                bank_records.status = "success"
-                bank_records.save()
-                success += 1
-            else:
-                bank_records.status = "Failed"
-                bank_records.save()
-                Failed += 1
-        for bank_records in bank_statements:
-            match_report = daily_reports.filter(
-            Q(instrument_number=bank_records.journal_number) |
-                Q(instrument_number=bank_records.instrument_number) |
-                Q(instrument_number=bank_records.reference_no)|
-                Q(instrument_number=bank_records.rr_number)|
-                Q(instrument_number=bank_records.journal_number),
-                Q(debit_amount= bank_records.credit)|
-                Q(credit_amount=bank_records.debit)
-                
-            )
-            if match_report:
-                bank_records.status = "success"
-                bank_records.save()
-                success += 1
-            else:
-                bank_records.status = "Failed"
-                bank_records.save()
-                Failed += 1
-
-    
+                            ) 
+                            AND 
+                            (
+                                drbs.debit_amount = bs.credit OR 
+                                drbs.credit_amount = bs.debit
+                            )
+                    )
+                    THEN 'success'
+                    ELSE 'Failed'
+                END
+                WHERE bs.date BETWEEN %s AND %s
+            ''', [startdate, enddate])
+            
+            # Count the number of successful and failed updates in BankStatement
+            cursor.execute('''
+                SELECT 
+                    SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) AS success_count,
+                    SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) AS failed_count
+                FROM public."BackendBil_bankstatement"
+                WHERE date BETWEEN %s AND %s
+            ''', [startdate, enddate])
+            result = cursor.fetchone()
+            success += result[0] or 0
+            Failed += result[1] or 0
+        
+        # Display success and failure messages
         if success > 0:
             messages.success(request, f"Reconciliation done for {success} records.")
         if Failed > 0:
-            print("nafhdgagv")
             messages.error(request, f"Reconciliation failed for {Failed} records.")
         
         return render(request, 'Reconcialtion.html')
-            
-
+    
     else:
         messages.error(request, "Please enter the required date range.")
-  
-        
-    
+        return render(request, 'Reconcialtion.html')
 
-    return render(request, 'Reconcialtion.html')
 
 from django.views.decorators.http import require_GET
 from django.http import JsonResponse
