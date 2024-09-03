@@ -46,7 +46,7 @@ $(document).ready(function () {
                     <select class="form-select bg-dark" style="color: aliceblue" aria-label="Default select example" name="system_name">
                         <option selected>Select System Name</option>
                         <option value="LMS">LMS</option>
-                        <option value="PF">pf</option>
+                        <option value="PF">PF</option>
                         <option value="Insurance">Insurance</option>
                       </select>
                 </div>
@@ -62,6 +62,7 @@ $(document).ready(function () {
 
   $("#location").on("click", ".button-minus", function () {
     $(this).closest(".d-flex.flex-row").remove();
+    localStorage.clear();
     // saveFields();
   });
 

@@ -2,6 +2,14 @@ from django.db import models
 from django.core.exceptions import ValidationError
 
 # Create your models here.
+class User(models.Model):
+    username = models.CharField(max_length=150,null=False)
+    employee_id = models.CharField(max_length=100,null=False)
+    email = models.CharField(max_length=100,null=False)
+    cid = models.IntegerField(null=False)
+    status = models.CharField(max_length=50, default='Inactive')
+    user_created =models.DateTimeField(auto_now_add=True)
+
 class System(models.Model):
     name=models.CharField(max_length=100)
     def __str__(self):
@@ -39,6 +47,8 @@ class BankStatement(models.Model):
     bank_account_number= models.CharField(max_length=40, null=True,blank=True)
     status = models.CharField(max_length=50, default='Pending')
     system_name = models.ForeignKey(System,on_delete=models.CASCADE)
+    bankstatement_uploaded =models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User,on_delete=models.CASCADE)
  
     class Meta:
         unique_together = ('date', 'journal_number')
@@ -61,6 +71,10 @@ class DailyReportBankStatement(models.Model):
     system_name = models.ForeignKey(System,on_delete=models.CASCADE)
     status = models.CharField(max_length=50, default='Pending')
     bank_account_number= models.CharField(max_length=40, null=True,blank=True)
+    daily_uploaded = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User,on_delete=models.CASCADE)
+
+
 
 
 

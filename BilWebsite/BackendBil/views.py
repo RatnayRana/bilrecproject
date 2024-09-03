@@ -323,8 +323,8 @@ def uploaddailyreport(request):
     if request.method == 'POST':
 
         system_name = request.POST.get('system_name')
-        system_namer = request.POST.get('system_name_drop_down')
-       
+        system_namer = request.POST.get('bank_name_drop_down')
+        print(system_namer)
         
         
         try:
@@ -356,7 +356,7 @@ def uploaddailyreport(request):
             print("Please upload the file")
             return render(request, 'uploadbankstatement.html', {'error': 'Please upload the file'})
         try:
-            if system_name=='PF':
+            if system_name=='PF' or system_namer=='PF':
                 if os.path.exists(file_path):
                     
                     
@@ -468,7 +468,7 @@ def uploaddailyreport(request):
                     else:
                         print("No such extension")  
 
-            elif system_name == 'Insurance':
+            elif system_name == 'Insurance' or system_namer=='Insurance':
                 if os.path.exists(file_path):
                     wb = openpyxl.load_workbook(file_path)
                     ws = wb.active
@@ -528,7 +528,7 @@ def uploaddailyreport(request):
                             BankStatement = True
                     except Exception as e:
                         print(f"There was a problem uploading the data: {e}")
-            elif system_name == 'LMS':
+            elif system_name == 'LMS' or system_namer=='LMS':
                 if os.path.exists(file_path):
                     wb = openpyxl.load_workbook(file_path)
                     ws = wb.active
@@ -656,7 +656,7 @@ def generateReport(request):
 
         try:
             query = """
-            SELECT 
+            SELECT DISTINCT ON (dr.instrument_number)
                     dr.id,
                     dr.tran_date,
                     dr.voucher_no,
@@ -667,6 +667,7 @@ def generateReport(request):
                     bbs.journal_number,
                     bbs.reference_no,
                     bbs.instrument_number AS bbs_instrument_number,
+                     bbs.rr_number,
                     bbs.debit,
                     bbs.credit,
                     bbs.bank_account_number,
@@ -677,7 +678,8 @@ def generateReport(request):
                     sys.id = bbs.system_name_id and(
                     dr.instrument_number = bbs.journal_number 
                     OR dr.instrument_number = bbs.instrument_number 
-                    OR dr.instrument_number = bbs.reference_no)
+                    OR dr.instrument_number = bbs.reference_no
+                    or dr.instrument_number= bbs.rr_number)
  
                 WHERE dr.status = 'success' 
                 AND dr.tran_date BETWEEN %s AND %s 
@@ -722,7 +724,7 @@ def generateReport(request):
                 headers = [
                             'SL.No', 'Date', 'Voucher Number', 'DCR Instrument Number', 
                             'DCR credit_amount','DCR debit_amount' ,'System Name', 'Bank Statement instrument_number', 
-                            'bankstatement_reference_no', 'bankstatement_journalnumber',
+                            'bankstatement_reference_no', 'bankstatement_journalnumber',' bankstatement RR_number'
                             'bankstatement_credit', 'bankstatement_debit', 'Bank Number', 'status'
                 ]
                 for col_num, header in enumerate(headers, 1):
@@ -739,10 +741,11 @@ def generateReport(request):
                     sheet1[f'H{row_num}'] = getattr(record, 'instrument_number', 'N/A')
                     sheet1[f'I{row_num}'] = getattr(record, 'reference_no', 'N/A')
                     sheet1[f'J{row_num}'] = getattr(record, 'journal_number', 'N/A')
-                    sheet1[f'K{row_num}'] = getattr(record, 'credit', 'N/A')
-                    sheet1[f'L{row_num}'] = getattr(record, 'debit', 'N/A')
-                    sheet1[f'M{row_num}'] = getattr(record, 'bank_account_number', 'N/A')
-                    sheet1[f'N{row_num}'] = getattr(record, 'status', 'N/A')
+                    sheet1[f'K{row_num}'] = getattr(record, 'rr_number', 'N/A')
+                    sheet1[f'L{row_num}'] = getattr(record, 'credit', 'N/A')
+                    sheet1[f'M{row_num}'] = getattr(record, 'debit', 'N/A')
+                    sheet1[f'N{row_num}'] = getattr(record, 'bank_account_number', 'N/A')
+                    sheet1[f'O{row_num}'] = getattr(record, 'status', 'N/A')
 
         except Exception as e:
                 print(f"An error occurred: {str(e)}")
@@ -893,6 +896,7 @@ def startReconcilation(request):
         
         with connection.cursor() as cursor:
             # Update DailyReportBankStatement based on matching criteria
+           
             cursor.execute('''
                 UPDATE public."BackendBil_dailyreportbankstatement" drbs
                 SET status = CASE
@@ -902,15 +906,18 @@ def startReconcilation(request):
                         WHERE 
                             (
                                 bs.journal_number = drbs.instrument_number OR 
-                                bs.instrument_number = drbs.instrument_number OR 
-                                bs.reference_no = drbs.instrument_number
-                                OR bs.rr_number =drbs.instrument_number
+                                   bs.instrument_number = drbs.instrument_number OR 
+                                bs.reference_no = drbs.instrument_number OR
+                                 bs.rr_number =drbs.instrument_number
                             ) 
                             AND 
                             (
                                 bs.debit = drbs.credit_amount OR 
                                 bs.credit = drbs.debit_amount
                             )
+                           AND(
+                            bs.system_name_id=drbs.system_name_id
+                           )
                     )
                     THEN 'success'
                     ELSE 'Failed'
@@ -929,8 +936,7 @@ def startReconcilation(request):
             result = cursor.fetchone()
             success = result[0] or 0
             Failed = result[1] or 0
-            
-            # Update BankStatement based on matching criteria
+                            
             cursor.execute('''
                 UPDATE public."BackendBil_bankstatement" bs
                 SET status = CASE
@@ -940,8 +946,9 @@ def startReconcilation(request):
                         WHERE 
                             (
                                 drbs.instrument_number = bs.journal_number OR 
-                                drbs.instrument_number = bs.instrument_number OR 
-                                drbs.instrument_number = bs.reference_no OR
+                                   drbs.instrument_number = bs.reference_no OR
+                                        drbs.instrument_number = bs.instrument_number OR 
+
                                 drbs.instrument_number = bs.rr_number 
 
                             ) 
@@ -950,6 +957,9 @@ def startReconcilation(request):
                                 drbs.debit_amount = bs.credit OR 
                                 drbs.credit_amount = bs.debit
                             )
+                           AND(
+                            drbs.system_name_id=bs.system_name_id
+                           )
                     )
                     THEN 'success'
                     ELSE 'Failed'

@@ -38,9 +38,11 @@ $(document).ready(function () {
       const newContent = `
               <div>
                       <select class="form-select bg-dark" name="bank_name_drop_down" aria-label="Bank Name" style="color: aliceblue">
-                          <option selected disabled>Select Bank</option>
-                          <option value="Bank of Bhutan">Bank of Bhutan</option>
-                          <option value="Bhutan National Bank">Bhutan National Bank</option>
+                        <option selected>Select System Name</option>
+                        <option value="LMS">LMS</option>
+                        <option value="PF">PF</option>
+                        <option value="Insurance">Insurance</option>
+                      
                       </select>
                   </div>
               <input type="file" name="file_drop" id="file-${Date.now()}" class="inputfile" data-multiple-caption="{count} files selected" multiple>
