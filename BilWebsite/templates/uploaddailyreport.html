@@ -1,7 +1,7 @@
 {% extends 'home.html' %}
 {% load static %}
 
-{% block title %}Upload Daily Report{% endblock %}
+{% block title %}Upload System Report{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'src/input.css' %}">
@@ -30,6 +30,7 @@
                         <option value="LMS">LMS</option>
                         <option value="PF">PF</option>
                         <option value="Insurance">Insurance</option>
+                        <option value="GF">GF</option>
                       </select>
                 </div>
                 <input type="file" name="file" id="file" class="inputfile" data-multiple-caption="{count} files selected" multiple>

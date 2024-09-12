@@ -6,12 +6,14 @@ import os
 from django.db import IntegrityError
 import logging
 from decimal import Decimal
-
+from django.contrib.auth import authenticate, login
+from django.contrib import messages
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from .models import BankStatement
-from .models import Bank,System,DailyReportBankStatement,BankAccount
+from .models import Bank,System,DailyReportBankStatement,BankAccount,User
 from django.db.models import Q
 from datetime import date, datetime
 from django.db import connection
@@ -49,11 +51,19 @@ cursor = connection.cursor()
 
 def index(request):
     
+    return render(request, 'loginpage.html')
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def home(request):
+    
     return render(request, 'home.html')
 def user(request):
     
     return render(request, 'userpage.html')
+
 def uploadBankStatement(request):
+   
     folder='my_folder/' 
     
     if request.method == 'POST':
@@ -279,7 +289,6 @@ def uploadBankStatement(request):
 
                     
                 formatted_transactions = formatted_transactions[2:]
-                
                 for record in formatted_transactions:
                     try:
                         date = datetime.strptime(record['Date'], '%d-%b-%y')
@@ -356,7 +365,7 @@ def uploaddailyreport(request):
             print("Please upload the file")
             return render(request, 'uploadbankstatement.html', {'error': 'Please upload the file'})
         try:
-            if system_name=='PF' or system_namer=='PF':
+            if system_name=='PF' or system_name =='GF' or system_namer=='PF':
                 if os.path.exists(file_path):
                     
                     
@@ -898,44 +907,35 @@ def startReconcilation(request):
             # Update DailyReportBankStatement based on matching criteria
            
             cursor.execute('''
-                UPDATE public."BackendBil_dailyreportbankstatement" drbs
-                SET status = CASE
-                    WHEN EXISTS (
-                        SELECT 1
-                        FROM public."BackendBil_bankstatement" bs
-                        WHERE 
-                            (
-                                bs.journal_number = drbs.instrument_number OR 
-                                   bs.instrument_number = drbs.instrument_number OR 
-                                bs.reference_no = drbs.instrument_number OR
-                                 bs.rr_number =drbs.instrument_number
-                            ) 
-                            AND 
-                            (
-                                bs.debit = drbs.credit_amount OR 
-                                bs.credit = drbs.debit_amount
-                            )
-                           AND(
-                            bs.system_name_id=drbs.system_name_id
-                           )
-                    )
-                    THEN 'success'
-                    ELSE 'Failed'
-                END
-                WHERE drbs.tran_date BETWEEN %s AND %s
-            ''', [startdate, enddate])
-            
-            # Count the number of successful and failed updates in DailyReportBankStatement
-            cursor.execute('''
-                SELECT 
-                    SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) AS success_count,
-                    SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) AS failed_count
-                FROM public."BackendBil_dailyreportbankstatement"
-                WHERE tran_date BETWEEN %s AND %s
-            ''', [startdate, enddate])
-            result = cursor.fetchone()
-            success = result[0] or 0
-            Failed = result[1] or 0
+            UPDATE public."BackendBil_dailyreportbankstatement" drbs
+    SET status = CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM public."BackendBil_bankstatement" bs
+            WHERE 
+                (
+                    bs.journal_number = drbs.instrument_number OR 
+                    bs.instrument_number = drbs.instrument_number OR 
+                    bs.reference_no = drbs.instrument_number OR
+                    bs.rr_number = drbs.instrument_number
+                ) 
+                AND 
+                (
+                    bs.debit = drbs.credit_amount OR 
+                    bs.credit = drbs.debit_amount
+                )
+                AND (
+                    bs.system_name_id = drbs.system_name_id
+                )
+                
+                AND drbs.tran_date BETWEEN %s AND %s
+                AND bs.date BETWEEN %s AND %s
+        )
+        THEN 'success'
+        ELSE 'Failed'
+    END
+    WHERE drbs.tran_date BETWEEN %s AND %s
+''', [startdate, enddate, startdate, enddate, startdate, enddate])
                             
             cursor.execute('''
                 UPDATE public."BackendBil_bankstatement" bs
@@ -960,12 +960,14 @@ def startReconcilation(request):
                            AND(
                             drbs.system_name_id=bs.system_name_id
                            )
+                            AND drbs.tran_date BETWEEN %s AND %s
+                            AND bs.date BETWEEN %s AND %s
                     )
                     THEN 'success'
                     ELSE 'Failed'
                 END
                 WHERE bs.date BETWEEN %s AND %s
-            ''', [startdate, enddate])
+            ''', [startdate, enddate, startdate, enddate, startdate, enddate])
             
             # Count the number of successful and failed updates in BankStatement
             cursor.execute('''
@@ -1002,3 +1004,91 @@ def get_account_numbers(request):
     system_main_id=system_no.id
     accounts = BankAccount.objects.filter(system_name_id=system_main_id).values('account_name', 'account_number')
     return JsonResponse({'account_numbers': list(accounts)})
+from django.contrib.auth.hashers import make_password
+
+def userpage(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        empid = request.POST.get('empid')
+        email = request.POST.get('email')
+        cid = request.POST.get('cid')
+        password = request.POST.get('password')
+
+        if not all([name, empid, email, cid, password]):
+            messages.error(request, 'All fields are required.')
+            print("Missing required fields")
+            return render(request, 'userpage.html')
+
+        userexist = User.objects.filter(employee_id=empid).exists()
+        
+        if userexist:
+            print("User with employee ID already exists")
+            messages.error(request, 'A user with this employee ID already exists.')
+        else:
+            try:
+                print(f"Creating user with employee ID: {empid}")
+                hashpassword = make_password(password)
+                User.objects.create(
+                    username=name,
+                    employee_id=empid,
+                    email=email,
+                    cid=cid,
+                    password=hashpassword
+                )
+                messages.success(request, 'User created successfully!')
+                print("User created successfully")
+            except Exception as e:
+                print(f"Error creating user: {e}")
+                messages.error(request, 'An error occurred while creating the user.')
+    
+    return render(request, 'userpage.html')
+
+from django.contrib.auth.hashers import check_password
+from django.shortcuts import render, redirect
+from django.http import HttpResponse
+from .models import User
+
+# def loginpage(request):
+#     if request.method == 'POST':
+#         empid = request.POST.get('empid')
+#         password = request.POST.get('Password')
+#         print(password)
+        
+#         try:
+#             user = User.objects.get(employee_id=empid)
+            
+#             if user.password is None:
+#                 return HttpResponse('Password field is empty', status=500)
+            
+#             print("Stored password hash:", user.password)
+#             is_password_correct = check_password(password, user.password)
+#             print("Is password correct?", is_password_correct)
+            
+#             if is_password_correct:
+#                 # Authentication success
+#                 return redirect('home')
+#             else:
+#                 # Authentication failed
+#                 return HttpResponse('Invalid credentials', status=401)
+#         except User.DoesNotExist:
+#             return HttpResponse('User does not exist', status=404)
+#     else:
+#         return HttpResponse('Method not allowed', status=405)
+from django.contrib.auth.models import User
+def loginpage(request):
+    if request.method == 'POST':
+        empid = request.POST.get('empid')
+        password = request.POST.get('Password')
+        
+        patients = User.objects.all()
+        print(patients)
+        user = authenticate(request, username=empid, password=password)
+        print(user)
+        
+        if user is not None:
+            login(request, user)
+            return redirect('home')
+        else:
+            return render(request, 'loginpage.html', {'error': 'Invalid credentials'})
+    else:
+        return render(request, 'loginpage.html')

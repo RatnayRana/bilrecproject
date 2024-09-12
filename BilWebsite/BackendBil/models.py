@@ -3,11 +3,12 @@ from django.core.exceptions import ValidationError
 
 # Create your models here.
 class User(models.Model):
-    username = models.CharField(max_length=150,null=False)
-    employee_id = models.CharField(max_length=100,null=False)
-    email = models.CharField(max_length=100,null=False)
-    cid = models.IntegerField(null=False)
-    status = models.CharField(max_length=50, default='Inactive')
+    username = models.CharField(max_length=255,null=False)
+    employee_id = models.CharField(max_length=200,null=False,unique=True)
+    email = models.CharField(max_length=200,null=False)
+    cid = models.BigIntegerField(null=False,unique=True)
+    password = models.CharField(max_length=200,null=False)
+    status = models.CharField(max_length=150, default='Inactive')
     user_created =models.DateTimeField(auto_now_add=True)
 
 class System(models.Model):
@@ -48,7 +49,6 @@ class BankStatement(models.Model):
     status = models.CharField(max_length=50, default='Pending')
     system_name = models.ForeignKey(System,on_delete=models.CASCADE)
     bankstatement_uploaded =models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(User,on_delete=models.CASCADE)
  
     class Meta:
         unique_together = ('date', 'journal_number')
@@ -72,7 +72,6 @@ class DailyReportBankStatement(models.Model):
     status = models.CharField(max_length=50, default='Pending')
     bank_account_number= models.CharField(max_length=40, null=True,blank=True)
     daily_uploaded = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(User,on_delete=models.CASCADE)
 
 
 
