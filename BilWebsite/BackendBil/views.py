@@ -13,7 +13,7 @@ from django.http import HttpResponse
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from .models import BankStatement
-from .models import Bank,System,DailyReportBankStatement,BankAccount,User
+from .models import Bank,System,DailyReportBankStatement,BankAccount
 from django.db.models import Q
 from datetime import date, datetime
 from django.db import connection
@@ -51,7 +51,8 @@ cursor = connection.cursor()
 
 def index(request):
     
-    return render(request, 'loginpage.html')
+    # return render(request, 'loginpage.html')
+    return render(request, 'home.html')
 from django.contrib.auth.decorators import login_required
 
 @login_required
@@ -295,7 +296,7 @@ def uploadBankStatement(request):
                         BankStatement.objects.create(
                             date=date,
                             journal_number= record['TransactionNumber'] if record['TransactionNumber'] else None,
-                            rr_number= record['Description'] if record['Description'] else None,
+                            # rr_number= record['Description'] if record['Description'] else None,
                             instrument_number=record['CheckNo_InstrumentNo'] if record['CheckNo_InstrumentNo'] else None,
                             reference_no= record['Reference'] if record['Reference'] else None,
                             transaction_type=record['Transaction_status'] if record['Transaction_status'] else None,
@@ -489,7 +490,7 @@ def uploaddailyreport(request):
                                 match=re.search(pattern_insurance,str(cell.value))
                                 if match:  # Check if the regex pattern matches
                                     account_number = match.group()
-                                    print(f"Account Number: {account_number}")
+                                    # print(f"Account Number: {account_number}")
                     clean_data = []
                     for row in ws.iter_rows():
                         for cell in row:
@@ -708,12 +709,13 @@ def generateReport(request):
             conditions.append("dr.system_name_id = %s")
             params.append(system_id)
        
-        
-        if  account_number and account_number != 'Select Account Number':
+        cleaned_account_number = account_number.strip()
+
+        if  cleaned_account_number and cleaned_account_number != 'Select Account Number':
             conditions.append("bbs.bank_account_number = %s AND  dr.bank_account_number=%s")
-            params.append(account_number)  # Append the first account number
-            params.append(account_number)  # Append the first account number
-        print("Constructed Query:", query)
+            params.append(cleaned_account_number)  # Append the first account number
+            params.append(cleaned_account_number)  # Append the first account number
+        # print("Constructed Query:", query)
         print("Parameters:", params)
         
         if conditions:
@@ -784,17 +786,17 @@ def generateReport(request):
         #     params.append(system_id)
        
 
-        
-        if  account_number and account_number != 'Select Account Number':
+        cleaned_account_number = account_number.strip()
+        if  cleaned_account_number and cleaned_account_number != 'Select Account Number':
             conditions.append("dr.bank_account_number=%s")
-            params.append(account_number) 
+            params.append(cleaned_account_number) 
           
         
         if conditions:
             query += " AND " + " AND ".join(conditions)
 
         print("Constructed Query:", query)
-        print("Parameters:", params)
+        print("Parameters:", account_number)
 
         try:
                 try:
@@ -845,9 +847,11 @@ def generateReport(request):
             conditions.append("bbs.system_name_id = %s")
             params.append(system_id)
         
-        if account_number and account_number != 'Select Account Number':
+        cleaned_account_number = account_number.strip()
+
+        if cleaned_account_number and cleaned_account_number != 'Select Account Number':
             conditions.append("bbs.bank_account_number = %s ")
-            params.append(account_number)
+            params.append(cleaned_account_number)
         
         if conditions:
             query += " AND " + " AND ".join(conditions)
@@ -895,6 +899,22 @@ from django.db import connection
 def startReconcilation(request):
     startdate = request.POST.get('start_date')
     enddate = request.POST.get('end_date')
+    account_number = request.POST.get('account_number')
+    
+    context = {}  
+    account_numbers = BankAccount.objects.values_list('account_number','account_name')
+  
+    system = System.objects.values_list('id', 'name')
+    #  AND dr.system_name_id = %s
+    #  AND bbs.bank_account_number = %s
+    # system_id,account_number
+
+    # AND dr.system_name_id = %s
+    # AND bbs.bank_account_number= %s
+    context = {
+        'account_numbers': account_numbers,
+        'system':system
+    }
     
     if startdate and enddate:
         startdate = datetime.strptime(startdate, '%Y-%m-%d').date()
@@ -908,7 +928,7 @@ def startReconcilation(request):
            
             cursor.execute('''
             UPDATE public."BackendBil_dailyreportbankstatement" drbs
-    SET status = CASE
+        SET status = CASE
         WHEN EXISTS (
             SELECT 1
             FROM public."BackendBil_bankstatement" bs
@@ -930,12 +950,14 @@ def startReconcilation(request):
                 
                 AND drbs.tran_date BETWEEN %s AND %s
                 AND bs.date BETWEEN %s AND %s
+                AND bank_account_number = %s
+                
         )
         THEN 'success'
         ELSE 'Failed'
     END
-    WHERE drbs.tran_date BETWEEN %s AND %s
-''', [startdate, enddate, startdate, enddate, startdate, enddate])
+   
+''', [startdate, enddate, startdate, enddate,account_number])
                             
             cursor.execute('''
                 UPDATE public."BackendBil_bankstatement" bs
@@ -946,9 +968,8 @@ def startReconcilation(request):
                         WHERE 
                             (
                                 drbs.instrument_number = bs.journal_number OR 
-                                   drbs.instrument_number = bs.reference_no OR
-                                        drbs.instrument_number = bs.instrument_number OR 
-
+                                drbs.instrument_number = bs.reference_no OR
+                                drbs.instrument_number = bs.instrument_number OR 
                                 drbs.instrument_number = bs.rr_number 
 
                             ) 
@@ -962,12 +983,13 @@ def startReconcilation(request):
                            )
                             AND drbs.tran_date BETWEEN %s AND %s
                             AND bs.date BETWEEN %s AND %s
+                           AND bank_account_number = %s
                     )
                     THEN 'success'
                     ELSE 'Failed'
                 END
-                WHERE bs.date BETWEEN %s AND %s
-            ''', [startdate, enddate, startdate, enddate, startdate, enddate])
+              
+            ''', [ startdate, enddate, startdate, enddate,account_number])
             
             # Count the number of successful and failed updates in BankStatement
             cursor.execute('''
@@ -987,12 +1009,12 @@ def startReconcilation(request):
         if Failed > 0:
             messages.error(request, f"Reconciliation failed for {Failed} records.")
         
-        return render(request, 'Reconcialtion.html')
+        return render(request, 'Reconcialtion.html',context)
     
     else:
-        messages.error(request, "Please enter the required date range.")
-        return render(request, 'Reconcialtion.html')
-
+        
+        return render(request, 'Reconcialtion.html',context)
+    
 
 from django.views.decorators.http import require_GET
 from django.http import JsonResponse
@@ -1000,6 +1022,7 @@ from django.http import JsonResponse
 @require_GET
 def get_account_numbers(request):
     system_id = request.GET.get('system_id')
+    print(system_id)
     system_no = System.objects.get(name=system_id)
     system_main_id=system_no.id
     accounts = BankAccount.objects.filter(system_name_id=system_main_id).values('account_name', 'account_number')
@@ -1043,10 +1066,10 @@ def userpage(request):
     
     return render(request, 'userpage.html')
 
-from django.contrib.auth.hashers import check_password
-from django.shortcuts import render, redirect
-from django.http import HttpResponse
-from .models import User
+# from django.contrib.auth.hashers import check_password
+# from django.shortcuts import render, redirect
+# from django.http import HttpResponse
+# from .models import User
 
 # def loginpage(request):
 #     if request.method == 'POST':

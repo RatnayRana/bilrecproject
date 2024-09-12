@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    
 
  
   
@@ -144,7 +145,7 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 LOGIN_URL = 'loginpage'  # Assuming 'loginpage' is the name of your login view
-
+AUTH_USER_MODEL="BackendBil.User"
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 

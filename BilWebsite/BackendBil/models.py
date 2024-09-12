@@ -1,15 +1,12 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-
+from django.contrib.auth.models import AbstractUser
 # Create your models here.
-class User(models.Model):
-    username = models.CharField(max_length=255,null=False)
-    employee_id = models.CharField(max_length=200,null=False,unique=True)
-    email = models.CharField(max_length=200,null=False)
-    cid = models.BigIntegerField(null=False,unique=True)
-    password = models.CharField(max_length=200,null=False)
+class User(AbstractUser):
+    employee_id = models.CharField(max_length=200, unique=True)
+    cid = models.BigIntegerField(unique=True)
     status = models.CharField(max_length=150, default='Inactive')
-    user_created =models.DateTimeField(auto_now_add=True)
+    user_created = models.DateTimeField(auto_now_add=True)
 
 class System(models.Model):
     name=models.CharField(max_length=100)
