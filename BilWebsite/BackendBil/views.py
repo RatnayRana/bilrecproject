@@ -658,7 +658,9 @@ def generateReport(request):
         startdate = request.POST.get('start_date')
         enddate = request.POST.get('end_date')
         account_number = request.POST.get('account_number')
-        print(account_number)
+        if not (startdate and enddate and account_number):
+            messages.error(request,"Please select all the required fields please")
+            return render(request, 'generateReport.html',context)
         
         systemname = request.POST.get('typeofsystem')
        
@@ -677,9 +679,7 @@ def generateReport(request):
 
        
 
-        if not startdate and enddate and account_number:
-            messages.error(request,"Please select all the required fields please")
-            return render(request, 'generateReport.html',context)
+       
      
         
         try:
@@ -1071,7 +1071,7 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model
 User = get_user_model()
 def userpage(request):
-    print(User)
+    save = False
     if request.method == 'POST':
         username = request.POST.get('name')
         employee_id = request.POST.get('empid')
@@ -1083,7 +1083,13 @@ def userpage(request):
             messages.error(request, 'All fields are required.')
             print("Missing required fields")
             return render(request, 'userpage.html')
-
+        if re.fullmatch(r'[A-Za-z0-9@#$%^&+=]{8,}', password):
+            password = password
+    # match
+        else:
+            print("User with employee ID already exists")
+            messages.error(request, 'You havent saved the secure password')
+            
         userexist = User.objects.filter(employee_id=employee_id).exists()
         
         if userexist:
@@ -1101,8 +1107,10 @@ def userpage(request):
                     password=hashpassword,
                     status='Active'  # Set an initial status
                 )
+                
+             
                 messages.success(request, 'User created successfully!')
-                print("User created successfully")
+                return redirect('loginpage')
             except Exception as e:
                 print(f"Error creating user: {e}")
                 messages.error(request, 'An error occurred while creating the user.')
@@ -1110,8 +1118,8 @@ def userpage(request):
     return render(request, 'userpage.html')
 
 from django.contrib.auth.hashers import check_password
-from django.shortcuts import render, redirect
-from django.http import HttpResponse
+# from django.shortcuts import render, redirect
+# from django.http import HttpResponse
 
 
 def loginpage(request):
@@ -1138,8 +1146,8 @@ def loginpage(request):
                 return HttpResponse('Invalid credentials', status=401)
         except User.DoesNotExist:
             return HttpResponse('User does not exist', status=404)
-    else:
-        return render(request, 'home.html')
+    
+    return render(request, 'loginpage.html')
 
 # # from django.contrib.auth.models import User
 # def loginpage(request):
