@@ -36,18 +36,26 @@ $(document).ready(function () {
       );
   
       const newContent = `
-              <div>
-                      <select class="form-select bg-dark" name="bank_name_drop_down" aria-label="Bank Name" style="color: aliceblue">
+            
+                  <div style="display: flex; flex-direction: row; gap: 10px;">
+                    
+                    <select class="form-select bg-dark" style="color: aliceblue;" aria-label="Default select example" name="system_name">
                         <option selected>Select System Name</option>
                         <option value="LMS">LMS</option>
                         <option value="PF">PF</option>
                         <option value="Insurance">Insurance</option>
-                      
-                      </select>
-                  </div>
-              <input type="file" name="file_drop" id="file-${Date.now()}" class="inputfile" data-multiple-caption="{count} files selected" multiple>
-              <label for="file-${Date.now()}"><span>Choose a file</span></label>
-              <button type="button" class="btn btn-primary button-minus">-</button>
+                        <option value="GF">GF</option>
+                    </select>
+                
+                    <!-- File Input and Label -->
+                    <input type="file" name="file" id="file" class="inputfile" data-multiple-caption="{count} files selected" multiple>
+                    <label for="file" style="text-align: center; width: 350px;"><span>Choose a file</span></label>
+                
+                    <!-- Button -->
+                    <button type="button" class="btn btn-primary button-minus">-</button>                               
+                </div>
+                    
+                  
           `;
       $newRow.append(newContent);
       $("#location").append($newRow);
