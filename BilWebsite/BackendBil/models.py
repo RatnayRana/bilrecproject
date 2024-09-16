@@ -1,6 +1,9 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth import get_user_model
+
+
 # Create your models here.
 class User(AbstractUser):
     employee_id = models.CharField(max_length=200, unique=True)
@@ -46,7 +49,7 @@ class BankStatement(models.Model):
     status = models.CharField(max_length=50, default='Pending')
     system_name = models.ForeignKey(System,on_delete=models.CASCADE)
     bankstatement_uploaded =models.DateTimeField(auto_now_add=True)
- 
+    useruploaded = models.ForeignKey(get_user_model(),on_delete=models.CASCADE, null=True, blank=True)
     class Meta:
         unique_together = ('date', 'journal_number')
 
@@ -69,6 +72,9 @@ class DailyReportBankStatement(models.Model):
     status = models.CharField(max_length=50, default='Pending')
     bank_account_number= models.CharField(max_length=40, null=True,blank=True)
     daily_uploaded = models.DateTimeField(auto_now_add=True)
+
+    useruploaded = models.ForeignKey(get_user_model(),on_delete=models.CASCADE, null=True, blank=True)
+
 
 
 

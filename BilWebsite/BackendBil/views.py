@@ -51,19 +51,31 @@ cursor = connection.cursor()
 
 def index(request):
     
-    # return render(request, 'loginpage.html')
-    return render(request, 'home.html')
+    return render(request, 'loginpage.html')
+    # return render(request, 'home.html')
 from django.contrib.auth.decorators import login_required
+import logging
 
+logger = logging.getLogger(__name__)
 @login_required
 def home(request):
+    user = request.user
     
+    # Access user details
+    username = user.username
+    print(username)
+    logger.info(f"Logged in user: {username}")  #
     return render(request, 'home.html')
 def user(request):
     
     return render(request, 'userpage.html')
 
 def uploadBankStatement(request):
+    user = request.user
+    
+    # Access user details
+    user_id = user.id
+   
    
     folder='my_folder/' 
     
@@ -75,9 +87,12 @@ def uploadBankStatement(request):
       
         Bank_data= None
         System_data=None
+        user_uploaded = None
+
         try:
             Bank_data = Bank.objects.get(Q(name=bank_name) | Q(name=bank_namer))
             System_data = System.objects.get(Q(name=system_name)| Q(name=system_namer))
+            user_uploaded = User.objects.get(id=user_id)
             print(System_data)
 
         except System.DoesNotExist:
@@ -86,6 +101,9 @@ def uploadBankStatement(request):
         except Bank.DoesNotExist:
             print("theerer")
             return render(request, 'uploaddailyreport.html', {'error': 'No such bank name present'})
+        except User.DoesNotExist:
+            return render(request, 'uploaddailyreport.html', {'error': 'No such user  present'})
+
         except:
             messages.error(request,"No data  present")
             return render(request,'uploadbankstatement.html')
@@ -108,7 +126,7 @@ def uploadBankStatement(request):
         
         if bank_name=='Bank of Bhutan' or bank_namer=="Bank of Bhutan":
             Bob_Bank_number = None
-           
+            
             if os.path.exists(file_path):
 
                 pdf = pdfplumber.open(file_path)  # Use the absolute path to open the file
@@ -126,24 +144,30 @@ def uploadBankStatement(request):
                                 
 
                     count_table = page.extract_table()
-                    cleaned_table = [[clean_cell(cell) for cell in row] for row in count_table]
-                    df = pd.DataFrame(cleaned_table[1:], columns=cleaned_table[0])
-                    df = df.drop('VALUE DATE', axis=1)
-                    for index, row in df.iterrows():
-                        particulars = row.get('PARTICULARS', '')
-                        if particulars and not particulars.endswith('88888'):
-                            match_data = rr_pattern.search(particulars)
-                            if match_data:
-                                df.at[index, 'PARTICULARS'] = match_data.group(1)
-                            else:
-                                df.at[index, 'PARTICULARS'] = ''
+                    try:
+                        cleaned_table = [[clean_cell(cell) for cell in row] for row in count_table]
+                        df = pd.DataFrame(cleaned_table[1:], columns=cleaned_table[0])
+                        df = df.drop('VALUE DATE', axis=1)
+                    
+                        for index, row in df.iterrows():
+                            particulars = row.get('PARTICULARS', '')
+                            if particulars and not particulars.endswith('88888'):
+                                match_data = rr_pattern.search(particulars)
+                                if match_data:
+                                    df.at[index, 'PARTICULARS'] = match_data.group(1)
+                                else:
+                                    df.at[index, 'PARTICULARS'] = ''
 
 
                         else:
-                            df.at[index, 'PARTICULARS'] = ''
-                    data_dicts = df.to_dict(orient='records')
-                    clean_data.extend(data_dicts)
-                  
+                                df.at[index, 'PARTICULARS'] = ''
+                        data_dicts = df.to_dict(orient='records')
+                        clean_data.extend(data_dicts)
+                    except:
+                        
+                        messages.error(request, "You have uploaded the wrong file")
+                        break
+                            
                 for record in clean_data:
                     try:
                         date = datetime.strptime(record['POST DATE'], '%d/%m/%Y')
@@ -172,6 +196,7 @@ def uploadBankStatement(request):
                             bank_name=Bank_data,
                             bank_account_number= Bob_Bank_number,
                             system_name=System_data,
+                            useruploaded=user_uploaded
 
                             )
                     except IntegrityError:
@@ -304,7 +329,9 @@ def uploadBankStatement(request):
                             balance=float(record['Balance'].replace(',', '')),
                             bank_name=Bank_data,
                             bank_account_number=Bank_Number,
-                            system_name=System_data,)
+                            system_name=System_data,
+                            useruploaded=user_uploaded
+                            )
                         BankStatementSave = True
                     except IntegrityError as e:
                             logger.warning(f"IntegrityError: {e}. Record with date {date} and journal number {journal_number} already exists.")
@@ -329,6 +356,10 @@ def uploadBankStatement(request):
     return render(request, 'uploadbankstatement.html')
 
 def uploaddailyreport(request):
+    user = request.user
+    
+    # Access user details
+    user_id = user.id
     folder='dailyreport/'
     if request.method == 'POST':
 
@@ -339,11 +370,16 @@ def uploaddailyreport(request):
         
         try:
             System_data = System.objects.get(Q(name=system_name)| Q(name=system_namer))
+            user_uploaded = User.objects.get(id=user_id)
             print(System_data)
 
         except System.DoesNotExist:
             messages.error(request, "No such system name are  present")
             return render(request, 'uploaddailyreport.html', {'error': 'No such bank name present'})
+        except User.DoesNotExist:
+            return render(request, 'uploaddailyreport.html', {'error': 'No such User is  present'})
+
+
         except Exception as e:
             print(e)
             return render(request, 'uploaddailyreport.html', {'error': f'Error retrieving data: {e}'})
@@ -419,6 +455,7 @@ def uploaddailyreport(request):
                                             cheque_amount=float(record.get('Cheque Amount', '0').replace(',', '')),
                                             cash_amount=float(record['Cash Amount'].replace(',', '')) if record['Cash Amount'] else  None,
                                             system_name=System_data,
+                                            useruploaded=user_uploaded
         
                                         )
                                     BankStatement = True
@@ -469,7 +506,8 @@ def uploaddailyreport(request):
                                         credit_amount=float(record['Cr Amount']) if record['Cr Amount'] else  0, 
                                         debit_amount=float(record['Dr Amount']) if record['Dr Amount'] else  0,
                                         system_name=System_data,
-                                        bank_account_number=account_number
+                                        bank_account_number=account_number,
+                                        useruploaded=user_uploaded
         
                                  )
                                 BankStatement = True
@@ -532,7 +570,8 @@ def uploaddailyreport(request):
                                     credit_amount=float(record['Cr Amount']) if record['Cr Amount'] else  0, 
                                     debit_amount=float(record['Dr Amount']) if record['Dr Amount'] else  0,
                                     system_name=System_data,
-                                    bank_account_number=account_number
+                                    bank_account_number=account_number,
+                                    useruploaded=user_uploaded
         
                                 )
                             BankStatement = True
@@ -580,7 +619,8 @@ def uploaddailyreport(request):
                                     credit_amount=float(record['Cr Amount']) if record['Cr Amount'] else  0, 
                                     debit_amount=float(record['Dr Amount']) if record['Dr Amount'] else  0,
                                     system_name=System_data,
-                                    bank_account_number=account_number
+                                    bank_account_number=account_number,
+                                    useruploaded=user_uploaded
         
                                 )
                             BankStatement = True
@@ -662,7 +702,7 @@ def generateReport(request):
         # Create sheets
         sheet1 = wb.create_sheet('Reconciliation Report')
         sheet2 = wb.create_sheet('FailedBank statement')
-        sheet3 = wb.create_sheet('Failed reportDCR')
+        sheet3 = wb.create_sheet('Failed reportSOS')
 
         try:
             query = """
@@ -733,8 +773,8 @@ def generateReport(request):
                 
                 print(f"Total records retrieved: {total_records}")
                 headers = [
-                            'SL.No', 'Date', 'Voucher Number', 'DCR Instrument Number', 
-                            'DCR credit_amount','DCR debit_amount' ,'System Name', 'Bank Statement instrument_number', 
+                            'SL.No', 'Date', 'Voucher Number', 'SOS Instrument Number', 
+                            'SOS credit_amount','SOS debit_amount' ,'System Name', 'Bank Statement instrument_number', 
                             'bankstatement_reference_no', 'bankstatement_journalnumber',' bankstatement RR_number'
                             'bankstatement_credit', 'bankstatement_debit', 'Bank Number', 'status'
                 ]
@@ -768,8 +808,8 @@ def generateReport(request):
 						dr.credit_amount,
 						dr.debit_amount, dr.status
                 FROM public."BackendBil_dailyreportbankstatement" dr
-                WHERE (dr.status = 'Failed' or dr.status='Pending')
-                AND dr.tran_date BETWEEN %s AND %s
+                WHERE (dr.status = 'Failed')
+                AND (dr.tran_date BETWEEN %s AND %s)
                 
     
             """
@@ -807,7 +847,7 @@ def generateReport(request):
                     messages.error(request, f"An error occurred while processing your request: {str(e)}")
                     return render(request, 'generateReport.html', context)
                 total_records = len(list(reconciliation_report))
-                headers = ['SL.No', 'Date', 'Voucher Number',  'DCR Instrument Number','credit_amount', 'debit_amount', 'status']
+                headers = ['SL.No', 'Date', 'Voucher Number',  'SOS Instrument Number','credit_amount', 'debit_amount', 'status']
                 for col_num, header in enumerate(headers, 1):
                     col_letter = get_column_letter(col_num)
                     sheet3[f'{col_letter}1'] = header
@@ -1028,35 +1068,38 @@ def get_account_numbers(request):
     accounts = BankAccount.objects.filter(system_name_id=system_main_id).values('account_name', 'account_number')
     return JsonResponse({'account_numbers': list(accounts)})
 from django.contrib.auth.hashers import make_password
-
+from django.contrib.auth import get_user_model
+User = get_user_model()
 def userpage(request):
+    print(User)
     if request.method == 'POST':
-        name = request.POST.get('name')
-        empid = request.POST.get('empid')
+        username = request.POST.get('name')
+        employee_id = request.POST.get('empid')
         email = request.POST.get('email')
         cid = request.POST.get('cid')
         password = request.POST.get('password')
 
-        if not all([name, empid, email, cid, password]):
+        if not all([username, employee_id, email, cid, password]):
             messages.error(request, 'All fields are required.')
             print("Missing required fields")
             return render(request, 'userpage.html')
 
-        userexist = User.objects.filter(employee_id=empid).exists()
+        userexist = User.objects.filter(employee_id=employee_id).exists()
         
         if userexist:
             print("User with employee ID already exists")
             messages.error(request, 'A user with this employee ID already exists.')
         else:
             try:
-                print(f"Creating user with employee ID: {empid}")
+                print(f"Creating user with employee ID: {employee_id}")
                 hashpassword = make_password(password)
                 User.objects.create(
-                    username=name,
-                    employee_id=empid,
+                    username=username,
+                    employee_id=employee_id,
                     email=email,
-                    cid=cid,
-                    password=hashpassword
+                    cid=int(cid),  # Convert to integer as cid is BigIntegerField
+                    password=hashpassword,
+                    status='Active'  # Set an initial status
                 )
                 messages.success(request, 'User created successfully!')
                 print("User created successfully")
@@ -1066,52 +1109,53 @@ def userpage(request):
     
     return render(request, 'userpage.html')
 
-# from django.contrib.auth.hashers import check_password
-# from django.shortcuts import render, redirect
-# from django.http import HttpResponse
-# from .models import User
+from django.contrib.auth.hashers import check_password
+from django.shortcuts import render, redirect
+from django.http import HttpResponse
 
+
+def loginpage(request):
+    if request.method == 'POST':
+        empid = request.POST['empid']
+        password = request.POST['Password']
+        print(password)
+        
+        try:
+            user = User.objects.get(employee_id=empid)
+            
+            if user.password is None:
+                return HttpResponse('Password field is empty', status=500)
+            
+            print("Stored password hash:", user.password)
+            is_password_correct = check_password(password, user.password)
+            print("Is password correct?", is_password_correct)
+            
+            if is_password_correct:
+                login(request, user)
+                return redirect('home')
+            else:
+                # Authentication failed
+                return HttpResponse('Invalid credentials', status=401)
+        except User.DoesNotExist:
+            return HttpResponse('User does not exist', status=404)
+    else:
+        return render(request, 'home.html')
+
+# # from django.contrib.auth.models import User
 # def loginpage(request):
 #     if request.method == 'POST':
 #         empid = request.POST.get('empid')
 #         password = request.POST.get('Password')
-#         print(password)
         
-#         try:
-#             user = User.objects.get(employee_id=empid)
-            
-#             if user.password is None:
-#                 return HttpResponse('Password field is empty', status=500)
-            
-#             print("Stored password hash:", user.password)
-#             is_password_correct = check_password(password, user.password)
-#             print("Is password correct?", is_password_correct)
-            
-#             if is_password_correct:
-#                 # Authentication success
-#                 return redirect('home')
-#             else:
-#                 # Authentication failed
-#                 return HttpResponse('Invalid credentials', status=401)
-#         except User.DoesNotExist:
-#             return HttpResponse('User does not exist', status=404)
+#         patients = User.objects.all()
+#         print(patients)
+#         user = authenticate(request, username=empid, password=password)
+#         print(user)
+        
+#         if user is not None:
+#             login(request, user)
+#             return redirect('home')
+#         else:
+#             return render(request, 'loginpage.html', {'error': 'Invalid credentials'})
 #     else:
-#         return HttpResponse('Method not allowed', status=405)
-from django.contrib.auth.models import User
-def loginpage(request):
-    if request.method == 'POST':
-        empid = request.POST.get('empid')
-        password = request.POST.get('Password')
-        
-        patients = User.objects.all()
-        print(patients)
-        user = authenticate(request, username=empid, password=password)
-        print(user)
-        
-        if user is not None:
-            login(request, user)
-            return redirect('home')
-        else:
-            return render(request, 'loginpage.html', {'error': 'Invalid credentials'})
-    else:
-        return render(request, 'loginpage.html')
+#         return render(request, 'loginpage.html')
