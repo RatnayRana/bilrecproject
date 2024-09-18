@@ -26,16 +26,16 @@
 
              <div  class="d-flex flex-row mt-2 gap-3" style="padding-left:20px;"> 
                 
-                    <div style="display: flex; flex-direction: row; gap: 10px;">
+                    <div style="display: flex; flex-direction: row; gap: 10px; ">
                         <!-- Bank Name Select -->
-                        <select class="form-select bg-dark" name="bank_name" id="bank_name[]" aria-label="Bank Name" style="color: aliceblue;">
+                        <select class="form-select bg-dark" name="bank_name[]" id="bank_name[]" aria-label="Bank Name" style="color: aliceblue;">
                             <option selected disabled>Select Bank</option>
                             <option value="Bank of Bhutan">Bank of Bhutan</option>
                             <option value="Bhutan National Bank">Bhutan National Bank</option>
                         </select>
                     
                         <!-- System Name Select -->
-                        <select class="form-select bg-dark" style="color: aliceblue;" aria-label="Default select example" name="system_name">
+                        <select class="form-select bg-dark" style="color: aliceblue;" aria-label="Default select example" name="system_name[]" id="system_name[]">
                             <option selected>Select System Name</option>
                             <option value="LMS">LMS</option>
                             <option value="PF">PF</option>
@@ -44,8 +44,8 @@
                         </select>
                     
                         <!-- File Input and Label -->
-                        <input type="file" name="file" id="file" class="inputfile" data-multiple-caption="{count} files selected" multiple>
-                        <label for="file" style="text-align: center; width: 350px;"><span>Choose File</span></label>
+                        <input type="file" name="file[]" id="file[]" class="inputfile" data-multiple-caption="{count} files selected" multiple>
+                        <label for="file[]" style="text-align: center; width: 350px;"><span>Choose File</span></label>
                     
                         <!-- Button -->
                         <button id="locationAlternate" type="button" class="btn btn-primary">+</button>

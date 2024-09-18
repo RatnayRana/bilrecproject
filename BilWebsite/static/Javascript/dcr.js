@@ -31,26 +31,28 @@ $(document).ready(function () {
     });
   
     $("#locationAlternate").on("click", function () {
+      const rowIndex = $("#location").children().length; // Ensure unique index
+
       const $newRow = $(
-        '<div class="d-flex flex-row mt-2 gap-3" style="padding-left:20px;"></div>'
+        '<div class="d-flex flex-row mt-2 gap-3" style="padding-left:20px; width:800px"></div>'
       );
   
       const newContent = `
             
-                  <div style="display: flex; flex-direction: row; gap: 10px;">
+                  <div style="display: flex; flex-direction: row; gap: 12px;">
                     
-                    <select class="form-select bg-dark" style="color: aliceblue;" aria-label="Default select example" name="system_name">
-                        <option selected>Select System Name</option>
-                        <option value="LMS">LMS</option>
-                        <option value="PF">PF</option>
-                        <option value="Insurance">Insurance</option>
-                        <option value="GF">GF</option>
-                    </select>
-                
-                    <!-- File Input and Label -->
-                    <input type="file" name="file" id="file" class="inputfile" data-multiple-caption="{count} files selected" multiple>
-                    <label for="file" style="text-align: center; width: 350px;"><span>Choose a file</span></label>
-                
+                        <!-- System Name Select -->
+                        <select class="form-select bg-dark" style="color: aliceblue;" aria-label="Default select example" name="system_name[]" id="system_name_{{ rowIndex }}" >
+                            <option selected>Select System Name</option>
+                            <option value="LMS">LMS</option>
+                            <option value="PF">PF</option>
+                            <option value="Insurance">Insurance</option>
+                            <option value="GF">GF</option>
+                        </select>
+                    
+                        <!-- File Input and Label -->
+                        <input type="file" name="file[]" id="file_${rowIndex}" class="inputfile" data-multiple-caption="{count} files selected" multiple>
+                        <label for="file_${rowIndex}" style="text-align: center; width: 350px;"><span>Choose a file</span></label>
                     <!-- Button -->
                     <button type="button" class="btn btn-primary button-minus">-</button>                               
                 </div>

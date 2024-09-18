@@ -7,6 +7,7 @@ $(document).ready(function () {
 
   // Event listener to save fields in localStorage on change
   $(document).on("change", ".inputfile", function (e) {
+    
     // saveFields();
     var $label = $(this).next("label");
     var labelVal = $label.text();
@@ -30,21 +31,23 @@ $(document).ready(function () {
   });
 
   $("#locationAlternate").on("click", function () {
+    const rowIndex = $("#location").children().length; // Ensure unique index
+
     const $newRow = $(
       '<div class="d-flex flex-row mt-2 gap-3" style="padding-left:20px;"></div>'
     );
-
+    
     const newContent = `
-              <div style="display: flex; flex-direction: row; gap: 10px;">
+              <div style="display: flex; flex-direction: row; gap: 12px; width:810px">
                <!-- Bank Name Select -->
-                        <select class="form-select bg-dark" name="bank_name" id="bank_name[]" aria-label="Bank Name" style="color: aliceblue;">
+                        <select class="form-select bg-dark" name="bank_name[]" id="bank_name_{{ rowIndex }}" aria-label="Bank Name" style="color: aliceblue; ">
                             <option selected disabled>Select Bank</option>
                             <option value="Bank of Bhutan">Bank of Bhutan</option>
                             <option value="Bhutan National Bank">Bhutan National Bank</option>
                         </select>
                     
                         <!-- System Name Select -->
-                        <select class="form-select bg-dark" style="color: aliceblue;" aria-label="Default select example" name="system_name">
+                        <select class="form-select bg-dark" style="color: aliceblue;" aria-label="Default select example" name="system_name[]" id="system_name_{{ rowIndex }}" >
                             <option selected>Select System Name</option>
                             <option value="LMS">LMS</option>
                             <option value="PF">PF</option>
@@ -53,8 +56,8 @@ $(document).ready(function () {
                         </select>
                     
                         <!-- File Input and Label -->
-                        <input type="file" name="file" id="file" class="inputfile" data-multiple-caption="{count} files selected" multiple>
-                        <label for="file" style="text-align: center; width: 340px;"><span>Choose a file</span></label>
+                        <input type="file" name="file[]" id="file_${rowIndex}" class="inputfile" data-multiple-caption="{count} files selected" multiple>
+                        <label for="file_${rowIndex}" style="text-align: center; width: 340px;"><span>Choose a file</span></label>
                     
                         <!-- Button -->
                 
