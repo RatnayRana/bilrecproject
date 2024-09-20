@@ -1284,22 +1284,3 @@ def loginpage(request):
             return HttpResponse("User does not exist", status=404)
 
     return render(request, "loginpage.html")
-
-    #           # from django.contrib.auth.models import User
-    # def loginpage(request):
-    #     if request.method == 'POST':
-    #         empid = request.POST.get('empid')
-    #         password = request.POST.get('Password')
-
-    #         patients = User.objects.all()
-    #         print(patients)
-    #         user = authenticate(request, username=empid, password=password)
-    #         print(user)
-
-    #         if user is not None:
-    #             login(request, user)
-    #             return redirect('home')
-    #         else:
-    #             return render(request, 'loginpage.html', {'error': 'Invalid credentials'})
-    #     else:
-    #         return render(request, 'loginpage.html')
