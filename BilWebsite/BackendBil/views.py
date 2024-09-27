@@ -32,15 +32,11 @@ pattern_pf = r"^(\d{5,})\s*-\s*(.*)"
 pattern_insurance = r"^\d{9}+$"
 rr_pattern = re.compile(r":(\d+)/")
 record_pattern = re.compile(r"\d{2}-[A-Z]{3}-\d{2}")
-description_pattern = re.compile(
-    r"(?<=\d{2}-[A-Z]{3}-\d{2})(?!.*\b\d{3}[A-Z]+\d{10,}|\d{16}\b).*"
-)
+description_pattern = re.compile(r"(?<=\d{2}-[A-Z]{3}-\d{2})(?!.*\b\d{3}[A-Z]+\d{10,}|\d{16}\b).*")
 pattern_reference = re.compile(r"\b\d{3}[A-Za-z]+\d+|\d{16}\b")
-instrument_pattern = re.compile(
-    r"(?<![-/           #,&\d])\b\d{6}\b(?![-/       #,&\d]| [A-Z])"
-)
+instrument_pattern = re.compile(r"(?<![-/#,&\d])\b\d{6}\b(?![-/#,&\d]| [A-Z])")
 pattern_amount = re.compile(r"\d{1,3}(?:,\d{3})*\.\d{2}")
-cheque_cleared = re.compile(r"(         #|NO|[.])\s*(\d{6})")
+cheque_cleared = re.compile(r"(#|NO|[.])\s*(\d{6})")
 in_house = re.compile(r"(?:-)\s*(\d{6})")
 Incoming_fund_transfer = re.compile(r"(?:RRN-|RRN\s*-)\s*(\d+)")
 bank_number_regex = re.compile(r"STATEMENT OF ACCOUNT FOR\s*[:]*\s*(\d{6,})")
@@ -312,6 +308,7 @@ def uploadBankStatement(request):
                             formatted_records.append(record)
 
                     for record in formatted_records:
+                        print(record)
                         date_match = record_pattern.search(record)
                         date = date_match.group() if date_match else ""
                         description_match = description_pattern.search(record)
@@ -361,6 +358,7 @@ def uploadBankStatement(request):
                         instrument = (
                             instrument_match.group() if instrument_match else " "
                         )
+                        print(instrument)
                         amounts = pattern_amount.findall(record)
                         credit_balance = amounts[0] if len(amounts) > 0 else ""
                         balance = amounts[1] if len(amounts) > 1 else ""
@@ -661,9 +659,17 @@ def process_lms(file_path, System_data, user_uploaded):
         wb = openpyxl.load_workbook(file_path)
         ws = wb.active
         first_sheet = wb.worksheets[0]
+        print(first_sheet)
         account_number = None
         excel_data = pd.read_excel(file_path, sheet_name=None)
-        sheet_data = excel_data["Sheet1"]
+        if 'Sheet1' in excel_data:
+            sheet_data = excel_data["Sheet1"]
+            print(sheet_data)
+        else:
+    # If Sheet1 doesn't exist, handle the error, perhaps by using the first sheet
+            sheet_data = list(excel_data.values())[0]  # Select the first available sheet
+            print("Sheet1 not found. Using the first available sheet.")
+            print(sheet_data)
 
         combined_text = " ".join(
             sheet_data.iloc[2:5]
