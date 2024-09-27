@@ -29,7 +29,7 @@ import openpyxl
 pattern_lms = r"\b\d{9}\b"
 
 pattern_pf = r"^(\d{5,})\s*-\s*(.*)"
-pattern_insurance = r"^\d{9}+$"
+pattern_insurance = r"^\d{9}$"
 rr_pattern = re.compile(r":(\d+)/")
 record_pattern = re.compile(r"\d{2}-[A-Z]{3}-\d{2}")
 description_pattern = re.compile(r"(?<=\d{2}-[A-Z]{3}-\d{2})(?!.*\b\d{3}[A-Z]+\d{10,}|\d{16}\b).*")
