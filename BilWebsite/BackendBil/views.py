@@ -32,15 +32,11 @@ pattern_pf = r"^(\d{5,})\s*-\s*(.*)"
 pattern_insurance = r"^\d{9}+$"
 rr_pattern = re.compile(r":(\d+)/")
 record_pattern = re.compile(r"\d{2}-[A-Z]{3}-\d{2}")
-description_pattern = re.compile(
-    r"(?<=\d{2}-[A-Z]{3}-\d{2})(?!.*\b\d{3}[A-Z]+\d{10,}|\d{16}\b).*"
-)
+description_pattern = re.compile(r"(?<=\d{2}-[A-Z]{3}-\d{2})(?!.*\b\d{3}[A-Z]+\d{10,}|\d{16}\b).*")
 pattern_reference = re.compile(r"\b\d{3}[A-Za-z]+\d+|\d{16}\b")
-instrument_pattern = re.compile(
-    r"(?<![-/           #,&\d])\b\d{6}\b(?![-/       #,&\d]| [A-Z])"
-)
+instrument_pattern = re.compile(r"(?<![-/#,&\d])\b\d{6}\b(?![-/#,&\d]| [A-Z])")
 pattern_amount = re.compile(r"\d{1,3}(?:,\d{3})*\.\d{2}")
-cheque_cleared = re.compile(r"(         #|NO|[.])\s*(\d{6})")
+cheque_cleared = re.compile(r"(#|NO|[.])\s*(\d{6})")
 in_house = re.compile(r"(?:-)\s*(\d{6})")
 Incoming_fund_transfer = re.compile(r"(?:RRN-|RRN\s*-)\s*(\d+)")
 bank_number_regex = re.compile(r"STATEMENT OF ACCOUNT FOR\s*[:]*\s*(\d{6,})")
