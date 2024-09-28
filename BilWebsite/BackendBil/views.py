@@ -308,7 +308,7 @@ def uploadBankStatement(request):
                             formatted_records.append(record)
 
                     for record in formatted_records:
-                        print(record)
+                        
                         date_match = record_pattern.search(record)
                         date = date_match.group() if date_match else ""
                         description_match = description_pattern.search(record)
@@ -379,7 +379,12 @@ def uploadBankStatement(request):
                     for record in formatted_transactions:
                         try:
                             date = datetime.strptime(record["Date"], "%d-%b-%y")
-                            BankStatement.objects.create(
+                            existing_record = BankStatement.objects.filter(date=date, journal_number=journal_number).first()
+        
+                            if existing_record:
+                                logger.info(f"Record with date {date} and journal number {journal_number} already exists. Skipping.")
+                            else:
+                                BankStatement.objects.create(
                                 date=date,
                                 journal_number=(
                                     record["TransactionNumber"]
@@ -407,7 +412,7 @@ def uploadBankStatement(request):
                                 system_name=System_data,
                                 useruploaded=user_uploaded,
                             )
-                            BankStatementSave = True
+                                BankStatementSave = True
                         except IntegrityError as e:
                             logger.warning(
                                 f"IntegrityError: {e}. Record with date {date} and journal number {journal_number} already exists."
