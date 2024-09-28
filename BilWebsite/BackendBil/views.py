@@ -378,11 +378,12 @@ def uploadBankStatement(request):
                     formatted_transactions = formatted_transactions[2:]
                     for record in formatted_transactions:
                         try:
+                            journal_number = record.get('journal_number')
                             date = datetime.strptime(record["Date"], "%d-%b-%y")
                             existing_record = BankStatement.objects.filter(date=date, journal_number=journal_number).first()
         
                             if existing_record:
-                                logger.ingsfo(f"Record with date {date} and journal number {journal_number} already exists. Skipping.")
+                                logger.info(f"Record with date {date} and journal number {journal_number} already exists. Skipping.")
                                 break
                             else:
                                 BankStatement.objects.create(
