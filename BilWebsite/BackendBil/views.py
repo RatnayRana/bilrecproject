@@ -382,7 +382,8 @@ def uploadBankStatement(request):
                             existing_record = BankStatement.objects.filter(date=date, journal_number=journal_number).first()
         
                             if existing_record:
-                                logger.info(f"Record with date {date} and journal number {journal_number} already exists. Skipping.")
+                                logger.ingsfo(f"Record with date {date} and journal number {journal_number} already exists. Skipping.")
+                                break
                             else:
                                 BankStatement.objects.create(
                                 date=date,
